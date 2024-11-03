@@ -1,8 +1,10 @@
-import { Client as _Client } from "@notionhq/client";
-import type { ClientOptions } from "@notionhq/client/build/src/Client";
-import type {
+import {Client as _Client} from "@notionhq/client";
+import type {ClientOptions} from "@notionhq/client/build/src/Client";
+import {
   BlockObjectResponse,
   PageObjectResponse,
+  QueryDatabaseParameters,
+  QueryDatabaseResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 
 export class Client extends _Client {
@@ -59,9 +61,22 @@ export class Client extends _Client {
 
     return { ...page, blocks };
   }
+
+  async fetchPageListFromDatabase(params: QueryDatabaseParameters): Promise<QueryDatabaseResults> {
+    const response = await this.databases.query(params);
+    const result = [...response.results];
+    if (response.has_more) {
+      const nextParams = {...params, database_id: response.next_cursor};
+      const nextResult = await this.fetchPageListFromDatabase(nextParams);
+      result.push(...nextResult);
+    }
+
+    return result;
+  }
 }
 
 export type Block = BlockObjectResponse & { blocks: Block[] };
 export type ContentfulPage = PageObjectResponse & { blocks: Block[] };
+export type QueryDatabaseResults = QueryDatabaseResponse['results'];
 export { ClientOptions };
 export default Client;
